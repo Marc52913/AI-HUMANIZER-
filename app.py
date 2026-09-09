@@ -240,6 +240,101 @@ COMMON_REPLACEMENTS = {
 
 
 # =========================================================
+# PATTERN LIBRARY – SOURCE: 4 EXTERNAL GUIDES
+# =========================================================
+
+# SOURCE 1: Hunting the Muse (https://huntingthemuse.net/library/how-to-tell-if-writing-is-ai)
+# Patterns: em dashes (no spaces), forced sass, AI buzzwords
+EM_DASH_PATTERNS = {
+    r"(?<!\s)—(?!\s)": " — ",  # unspaced em dash → spaced
+    r"—": " — ",                # catch any remaining
+}
+
+SASS_PHRASES = {
+    r"\bBut here's the thing[:]\s*": "But ",
+    r"\bThen I realized[:]\s*": "",
+    r"\bThe result[?][:]\s*": "",
+    r"\bHot take[:]\s*": "",
+    r"\bAnd honestly[?][:]\s*": "",
+}
+
+AI_BUZZWORDS_HUNTING = {
+    r"\bdelve\b": "explore",
+    r"\btapestry\b": "range",
+    r"\bnavigate\b": "handle",
+    r"\bgrounded\b": "based",
+    r"\bquietly\b": "",
+    r"\bunlock\b": "reveal",
+    r"\bempower\b": "enable",
+    r"\belevate\b": "improve",
+}
+
+# SOURCE 2: AI Detector Checker (https://detector-checker.ai/blog/signs-of-ai-generated-text-vs-human-written-text/)
+# Patterns: generic claims, uniform structure (handled in break_ai_sentence_patterns)
+GENERIC_CLAIMS = {
+    r"\b(increasingly|critically)\s+(significant|important|transformative)\b": r"\1 relevant",
+    r"\bplays?\s+a\s+crucial\s+role\b": "helps",
+    r"\b(it is|this is)\s+(widely\s+)?(considered|regarded)\s+as\s+(important|significant)\b": "it matters",
+}
+
+# SOURCE 3: Wandering Educators (https://www.wanderingeducators.com/best/stories/top-signs-writing-generated-by-ai-how-to-fix-it)
+# Patterns: transition crutches, stock phrases, emotional flatline (handled via personal detail injection prompt)
+TRANSITION_CRUTCHES = {
+    r"\bMoreover,\s*": "",
+    r"\bFurthermore,\s*": "",
+    r"\bConsequently,\s*": "",
+    r"\bIn addition,\s*": "",
+    r"\bAdditionally,\s*": "",
+}
+
+STOCK_PHRASES = {
+    r"\bit is important to note that\b": "",
+    r"\bin today's fast-paced world\b": "Today",
+    r"\bin the dynamic landscape of\b": "In",
+    r"\bas the world continues to evolve\b": "",
+    r"\bit goes without saying\b": "",
+}
+
+# SOURCE 4: Sean Kernan (https://seanjkernan.substack.com/p/13-signs-you-used-chatgpt-to-write)
+# Patterns: parallelism, hedging, blogging clichés, buzzwords
+PARALLELISM_PATTERNS = {
+    r"\bIt's not about\s+([^,;.]+?),\s+it's about\s+([^,;.]+?)\b": 
+        lambda m: f"{m.group(1)} matters more than {m.group(2)}",
+    r"\bIt's not just\s+([^,;.]+?),\s+it's also\s+([^,;.]+?)\b": 
+        lambda m: f"{m.group(1)} and {m.group(2)} both matter",
+    r"\bNot only\s+([^,;.]+?),\s+but also\s+([^,;.]+?)\b":
+        lambda m: f"{m.group(1)} and {m.group(2)}",
+}
+
+HEDGING_PHRASES = {
+    r"\btypically\b": "often",
+    r"\bmore often than not\b": "usually",
+    r"\bmight be\b": "may be",
+    r"\bdon't always\b": "sometimes don't",
+    r"\bcan also\b": "also",
+}
+
+BLOG_CLICHES = {
+    r"\bAh, yes,\s*": "",
+    r"\byou have the power to\b": "you can",
+    r"\bnow, this might make you wonder\b": "",
+    r"\bwithout further ado\b": "",
+    r"\bhave you ever wondered\b": "",
+    r"\beveryone wants to\b": "Many want to",
+    r"\bif you have ever wondered\b": "",
+}
+
+AI_BUZZWORDS_KERNAN = {
+    r"\bleverage\b": "use",
+    r"\bpivotal\b": "important",
+    r"\bcomprehensive\b": "broad",
+    r"\brobust\b": "strong",
+}
+
+# Combined buzzword dictionary (merge both sources)
+AI_BUZZWORDS = {**AI_BUZZWORDS_HUNTING, **AI_BUZZWORDS_KERNAN}
+
+# =========================================================
 # DE-AI PHRASE MAPPINGS (neutralize AI-generated puffery)
 # =========================================================
 
@@ -265,16 +360,12 @@ VAGUE_ATTRIB = {
 # AI TEXT STRUCTURAL REWRITER
 # =========================================================
 
-# Patterns specific to AI-generated text structure
 AI_STRUCTURAL_PATTERNS = {
     # Overly formal sentence openings
     r"\b(It is noteworthy that|It is important to note that|It should be noted that)\b": "",
     
     # Redundant introductory phrases
     r"\b(In the context of|With respect to|In terms of)\b": "Regarding",
-    
-    # AI's favorite transition formula
-    r"\b(Moreover|Furthermore|In addition),\s*(this|the|these)\s+": "",
     
     # Generic concluding statements
     r"\b(In conclusion|To summarize|Overall),\s*": "",
@@ -288,7 +379,6 @@ AI_STRUCTURAL_PATTERNS = {
     r"\b(make|give)\s+(an?\s+)?(argument|statement)\s+that\b": r"argue",
 }
 
-# AI overused phrases - replace with simpler alternatives
 AI_PHRASE_REPLACEMENTS = {
     r"\bas\s+a\s+result\s+of\b": "because of",
     r"\bdue\s+to\s+the\s+fact\s+that\b": "because",
@@ -382,6 +472,79 @@ def humanize_ai_structure(text):
     text = simplify_ai_complexity(text)
     text = remove_redundant_modifiers(text)
     text = break_ai_sentence_patterns(text)
+    return text
+
+
+# =========================================================
+# APPLY ALL PATTERN-BASED FILTERS FROM EXTERNAL GUIDES
+# =========================================================
+
+def normalize_em_dashes(text):
+    """SOURCE: Hunting the Muse – Convert unspaced em dashes to spaced"""
+    for pattern, replacement in EM_DASH_PATTERNS.items():
+        text = re.sub(pattern, replacement, text)
+    return text
+
+def remove_sass_phrases(text):
+    """SOURCE: Hunting the Muse – Remove forced conflict creators"""
+    for pattern, replacement in SASS_PHRASES.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def replace_ai_buzzwords(text):
+    """SOURCE: Hunting the Muse + Sean Kernan – Replace overused AI vocabulary"""
+    for pattern, replacement in AI_BUZZWORDS.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def remove_stock_phrases(text):
+    """SOURCE: Wandering Educators – Remove filler stock phrases"""
+    for pattern, replacement in STOCK_PHRASES.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def break_parallelism(text):
+    """SOURCE: Sean Kernan – Rewrite repetitive 'not X but Y' structures"""
+    for pattern, replacement in PARALLELISM_PATTERNS.items():
+        # Use lambda for dynamic replacement
+        text = re.sub(pattern, lambda m: replacement(m), text, flags=re.IGNORECASE)
+    return text
+
+def neutralize_hedging(text):
+    """SOURCE: Sean Kernan – Replace excessive hedging"""
+    for pattern, replacement in HEDGING_PHRASES.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def remove_blog_cliches(text):
+    """SOURCE: Sean Kernan – Strip blogging clichés"""
+    for pattern, replacement in BLOG_CLICHES.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def remove_transition_crutches(text):
+    """SOURCE: Wandering Educators – Remove excessive transitions"""
+    for pattern, replacement in TRANSITION_CRUTCHES.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def neutralize_generic_claims(text):
+    """SOURCE: AI Detector Checker – Replace vague importance claims"""
+    for pattern, replacement in GENERIC_CLAIMS.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def humanize_ai_patterns(text):
+    """Apply all pattern-based filters from external guides in sequence"""
+    text = normalize_em_dashes(text)
+    text = remove_sass_phrases(text)
+    text = replace_ai_buzzwords(text)
+    text = remove_stock_phrases(text)
+    text = break_parallelism(text)
+    text = neutralize_hedging(text)
+    text = remove_blog_cliches(text)
+    text = remove_transition_crutches(text)
+    text = neutralize_generic_claims(text)
     return text
 
 
@@ -575,8 +738,11 @@ def clean_text(text):
 # =========================================================
 
 def humanize_text(text):
-    # Step 1: Structural fixes for AI-generated text (first pass)
+    # Step 1: Structural fixes for AI-generated text
     text = humanize_ai_structure(text)
+    
+    # Step 1.5: Pattern-based fixes from external guides
+    text = humanize_ai_patterns(text)
     
     # Step 2: Expand contractions (with 30% skip)
     text = expand_contractions(text)
