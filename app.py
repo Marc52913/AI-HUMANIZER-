@@ -6,10 +6,13 @@ st.set_page_config(
 )
 
 st.title("AI Text Humanizer")
-st.write("The website is working!")
+st.write("Enter your text below.")
 
-text = st.text_area("Enter your text:")
+text = st.text_area(
+    "Enter your text:",
+    height=250,
+    placeholder="Type or paste your text here..."
+)
 
-if st.button("Process Text"):
-    st.success("Text received!")
-    st.write(text)
+if text.strip():
+    st.write(f"**Word count:** {len(text.split())}")
