@@ -262,6 +262,130 @@ VAGUE_ATTRIB = {
 
 
 # =========================================================
+# AI TEXT STRUCTURAL REWRITER
+# =========================================================
+
+# Patterns specific to AI-generated text structure
+AI_STRUCTURAL_PATTERNS = {
+    # Overly formal sentence openings
+    r"\b(It is noteworthy that|It is important to note that|It should be noted that)\b": "",
+    
+    # Redundant introductory phrases
+    r"\b(In the context of|With respect to|In terms of)\b": "Regarding",
+    
+    # AI's favorite transition formula
+    r"\b(Moreover|Furthermore|In addition),\s*(this|the|these)\s+": "",
+    
+    # Generic concluding statements
+    r"\b(In conclusion|To summarize|Overall),\s*": "",
+    
+    # Passive voice triggers (convert to active where possible)
+    r"\b(was|were)\s+(\w+ed)\s+by\b": r"\2",
+    
+    # Nominalization (turning verbs into nouns)
+    r"\b(provide|offer)\s+(an?\s+)?(analysis|description|explanation)\s+of\b": r"analyze",
+    r"\b(conduct|perform)\s+(an?\s+)?(assessment|evaluation)\s+of\b": r"assess",
+    r"\b(make|give)\s+(an?\s+)?(argument|statement)\s+that\b": r"argue",
+}
+
+# AI overused phrases - replace with simpler alternatives
+AI_PHRASE_REPLACEMENTS = {
+    r"\bas\s+a\s+result\s+of\b": "because of",
+    r"\bdue\s+to\s+the\s+fact\s+that\b": "because",
+    r"\bin\s+order\s+to\b": "to",
+    r"\bprior\s+to\b": "before",
+    r"\bsubsequent\s+to\b": "after",
+    r"\bin\s+the\s+event\s+that\b": "if",
+    r"\bon\s+the\s+basis\s+of\b": "based on",
+    r"\bwith\s+the\s+exception\s+of\b": "except",
+    r"\bin\s+the\s+vicinity\s+of\b": "near",
+    r"\bat\s+the\s+present\s+time\b": "currently",
+    r"\bin\s+the\s+near\s+future\b": "soon",
+    r"\bhas\s+the\s+ability\s+to\b": "can",
+    r"\bhas\s+the\s+capacity\s+to\b": "can",
+}
+
+# Structural transformations
+def break_ai_sentence_patterns(text):
+    """Convert AI's typical long complex sentences into varied structures"""
+    doc = nlp(text)
+    sentences = [sent.text.strip() for sent in doc.sents if sent.text.strip()]
+    
+    if len(sentences) < 3:
+        return text
+    
+    new_sentences = []
+    for i, sent in enumerate(sentences):
+        # Randomly split long sentences (>15 words) into two
+        words = sent.split()
+        if len(words) > 15 and random.random() < 0.3:
+            mid = len(words) // 2
+            # Find a natural break point (after a comma, conjunction, or preposition)
+            break_points = [j for j in range(mid-3, mid+4) 
+                          if 0 < j < len(words) and words[j][-1] in ',.;:']
+            if break_points:
+                split_idx = random.choice(break_points)
+                first = " ".join(words[:split_idx+1])
+                second = " ".join(words[split_idx+1:])
+                # Capitalize second part
+                if second:
+                    second = second[0].upper() + second[1:]
+                new_sentences.append(first)
+                new_sentences.append(second)
+            else:
+                new_sentences.append(sent)
+        else:
+            new_sentences.append(sent)
+    
+    # Randomly combine some short sentences (<8 words)
+    combined = []
+    i = 0
+    while i < len(new_sentences):
+        if (i < len(new_sentences) - 1 and 
+            len(new_sentences[i].split()) < 8 and 
+            len(new_sentences[i+1].split()) < 8 and
+            random.random() < 0.3):
+            combined.append(new_sentences[i] + " " + new_sentences[i+1].lower())
+            i += 2
+        else:
+            combined.append(new_sentences[i])
+            i += 1
+    
+    return " ".join(combined)
+
+def remove_redundant_modifiers(text):
+    """Strip AI's excessive adjectives and adverbs"""
+    # Remove redundant intensifiers
+    intensifiers = r"\b(very|extremely|absolutely|completely|totally|utterly|highly|particularly|notably)\b"
+    text = re.sub(intensifiers + r"\s+", "", text, flags=re.IGNORECASE)
+    
+    # Remove redundant "important" and "crucial" modifiers
+    text = re.sub(r"\b(extremely|very)\s+(important|crucial)\b", r"\2", text, flags=re.IGNORECASE)
+    
+    return text
+
+def simplify_ai_complexity(text):
+    """Convert complex AI phrases to simpler human alternatives"""
+    for pattern, replacement in AI_PHRASE_REPLACEMENTS.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def apply_ai_structural_fixes(text):
+    """Apply all structural fixes to AI-generated text"""
+    for pattern, replacement in AI_STRUCTURAL_PATTERNS.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def humanize_ai_structure(text):
+    """Comprehensive structural rewriting for AI text"""
+    text = apply_ai_structural_fixes(text)
+    text = simplify_ai_complexity(text)
+    text = remove_redundant_modifiers(text)
+    text = break_ai_sentence_patterns(text)
+    return text
+
+
+# =========================================================
 # SYNONYM FUNCTION
 # =========================================================
 
@@ -451,25 +575,27 @@ def clean_text(text):
 # =========================================================
 
 def humanize_text(text):
-
-    # Step 1: Expand contractions (with 30% skip)
+    # Step 1: Structural fixes for AI-generated text (first pass)
+    text = humanize_ai_structure(text)
+    
+    # Step 2: Expand contractions (with 30% skip)
     text = expand_contractions(text)
-
-    # Step 2: Replace common words (context-aware, probability gate)
+    
+    # Step 3: Replace common words (context-aware, probability gate)
     text = replace_common_words(text)
-
-    # Step 3: Add transitions (randomized)
+    
+    # Step 4: Add transitions (randomized)
     text = improve_transitions(text)
-
-    # Step 4: Neutralize AI puffery
+    
+    # Step 5: Neutralize AI puffery
     text = neutralize_ai_puffery(text)
-
-    # Step 5: Neutralize vague attribution
+    
+    # Step 6: Neutralize vague attribution
     text = neutralize_vague_attribution(text)
-
-    # Step 6: Clean spacing and capitalization
+    
+    # Step 7: Clean spacing and capitalization
     text = clean_text(text)
-
+    
     return text
 
 
