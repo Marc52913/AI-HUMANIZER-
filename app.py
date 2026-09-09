@@ -240,7 +240,7 @@ COMMON_REPLACEMENTS = {
 
 
 # =========================================================
-# PATTERN LIBRARY – ALL SOURCES COMBINED
+# PATTERN LIBRARY – ALL SOURCES
 # =========================================================
 
 # SOURCE 1: Hunting the Muse
@@ -404,7 +404,7 @@ EXTRA_TRANSITIONS = {
     r"\bConsequently,\s*": "",
 }
 
-# SOURCE 11: AI Detector 360 – Advanced patterns
+# SOURCE 11: AI Detector 360
 BOTH_SIDES_HEDGING = {
     r"\bOn the one hand,\s*([^,;.]+?),\s*on the other hand,\s*([^,;.]+?)\b": 
         lambda m: f"{m.group(1)}. However, {m.group(2)}",
@@ -443,6 +443,134 @@ OBVIOUS_INDICATORS = [
     r"\bthat is to say\b",
     r"\bto put it simply\b",
 ]
+
+# SOURCE 15: CMU Study – Present participial clauses
+PRESENT_PARTICIPIAL = {
+    r"\b(\w+ing)\s+([^,;.]+?)\s+as\b": r"\2, \1",
+    r"\bBy\s+(\w+ing)\s+([^,;.]+?),\s+": r"To \2, ",
+}
+
+# SOURCE 16: Latest vocabulary tells (post-2025)
+NEW_AI_BUZZWORDS = {
+    r"\binterdependence\b": "connection",
+    r"\bconsequences\b": "effects",
+    r"\bincreasingly\b": "more",
+    r"\bsignificant\b": "notable",
+    r"\bcamaraderie\b": "teamwork",
+    r"\bintricate\b": "complex",
+}
+
+# SOURCE 17: Noun-heavy style (CMU study)
+NOUN_CHAINS = {
+    r"\b([A-Za-z]+)\s+([A-Za-z]+)\s+implementation\b": r"implementing \1 \2",
+    r"\b([A-Za-z]+)\s+([A-Za-z]+)\s+analysis\b": r"analyzing \1 \2",
+    r"\b([A-Za-z]+)\s+([A-Za-z]+)\s+development\b": r"developing \1 \2",
+}
+
+# SOURCE 18: Adaptation deficit
+TONE_SHIFTS = {
+    r"\b(It is|This is)\s+(clear|evident|obvious)\s+that\b": "",
+    r"\bThere is no doubt that\b": "",
+    r"\bUndoubtedly,\s*": "",
+}
+
+# SOURCE 19: Turnitin patterns
+TURNITIN_PATTERNS = {
+    r"\b(Additionally|Moreover|Furthermore)\s+[^,;.]+?\.\s+(Additionally|Moreover|Furthermore)\b": 
+        lambda m: m.group(0).replace(m.group(1), "Also").replace(m.group(2), "Also"),
+    r"\b(in conclusion|to summarize|overall)\s+[^,;.]+?\.": "",
+    r"\b(This|It)\s+is\s+(clear|evident|obvious)\s+that\b": "",
+    r"\b(not only|not just)\s+([^,;.]+?),\s+(but|and)\s+([^,;.]+?)\b": 
+        lambda m: f"{m.group(2)} and {m.group(4)}",
+}
+
+# SOURCE 20: ChatGPT artifacts
+CHATGPT_ARTIFACTS = {
+    r"\boaicite:\d+\b": "",
+    r"\bcontentReference\[oaicite:\d+\]\b": "",
+    r"\bturn0search\d+\b": "",
+    r"\bAs an AI language model[^.]*\.": "",
+    r"\bI hope this helps!?\b": "",
+    r"\bI hope this email finds you well\b": "",
+    r"\bGreat question!?\b": "",
+}
+
+# SOURCE 21: Claude signatures
+CLAUDE_SIGNATURES = {
+    r"\bdelve\b": "explore",
+    r"\btapestry\b": "range",
+    r"\bthe landscape of\b": "the field of",
+    r"\bfoster\s+": "encourage ",
+}
+
+# SOURCE 22: Gemini patterns
+GEMINI_PATTERNS = {
+    r"\bquietly\s+": "",
+    r"\bshift\s+in\s+thinking\b": "change in perspective",
+    r"\bthis matters because\b": "",
+    r"\bshapes?\s+the\s+(future|way|conversation)\b": "influences",
+    r"\blands?\s+": "",
+    r"\bactually\s+matters\b": "",
+    r"\breal\s+(growth|reason|value|impact)\b": r"\1",
+    r"\bdo the work\b": "put in effort",
+    r"\btrust the work\b": "",
+    r"\bhold space\b": "",
+    r"\bpull\s+of\b": "",
+    r"\bcompound\s+": "",
+    r"\bsignal\s+that\b": "",
+}
+
+# SOURCE 23: 16 Critical anti-patterns
+AI_ANTI_PATTERNS = {
+    r"\boaicite:\d+\b": "",
+    r"\bturn0search\d+\b": "",
+    r"\bcontentReference\[oaicite:\d+\]\b": "",
+    r"\bAs an AI[^.]*\.": "",
+    r"\bI hope this helps\b": "",
+    r"\bGreat question!?\b": "",
+    r"\b(delve|tapestry|landscape|pivotal|underscore|foster)\b": 
+        lambda m: {"delve": "explore", "tapestry": "range", "landscape": "field", 
+                   "pivotal": "important", "underscore": "show", "foster": "encourage"}.get(m.group(1), m.group(1)),
+    r"\bserves as a testament\b": "is",
+    r"\bpivotal moment\b": "important moment",
+    r"\bindelible mark\b": "",
+    r"\bplays a vital role\b": "helps",
+    r"\b(groundbreaking|transformative|revolutionary|unprecedented)\b": 
+        lambda m: {"groundbreaking": "notable", "transformative": "significant", 
+                   "revolutionary": "important", "unprecedented": "rare"}.get(m.group(1), m.group(1)),
+    r"\bserves as\b": "is",
+    r"\bboasts\b": "has",
+    r"\bhighlighting the importance of\b": "highlighting",
+    r"\bfostering collaboration\b": "encouraging collaboration",
+    r"\bin order to\b": "to",
+    r"\bdue to the fact that\b": "because",
+    r"\bAdditionally,\s*": "",
+    r"\bexperts believe\b": "sources indicate",
+    r"\bindustry reports suggest\b": "reports indicate",
+    r"\bDespite these challenges,\s*": "",
+    r"\bFuture outlook\b": "Next steps",
+    r"\"": '"',
+    r"\"": '"',
+    r"\bNot only\s+([^,;.]+?),\s+but also\s+([^,;.]+?)\b": 
+        lambda m: f"{m.group(1)} and {m.group(2)}",
+    r"\b([A-Za-z]+),\s+([A-Za-z]+),\s+and\s+([A-Za-z]+)\b(?:\.|\s+[A-Z])": 
+        lambda m: f"{m.group(1)}, {m.group(2)}, and {m.group(3)}",
+}
+
+# SOURCE 24: HSDM patterns
+HSDM_PATTERNS = {
+    r"\b(therefore|thus|hence)\b": ["so", "as a result", "consequently"],
+    r"\b(Additionally|Furthermore|Moreover)\b": ["Also", "Plus", "And"],
+    r"\b(important|significant|crucial|vital)\b": 
+        lambda m: random.choice(["key", "notable", "worth attention", "critical"]),
+}
+
+# SOURCE 25: MASH style transfer
+MASH_PATTERNS = {
+    r"\b(might|may|could|perhaps)\s+be\b": lambda m: random.choice(["may be", "could be", "is often"]),
+    r"\b(somewhat|generally|typically)\b": "",
+    r"\.\s+([A-Z][a-z]+)": lambda m: f". Perhaps {m.group(1).lower()}",
+}
 
 
 # =========================================================
@@ -653,11 +781,10 @@ def add_specificity(text):
 
 
 # =========================================================
-# PHASE 3: ADVANCED PATTERN NEUTRALIZATION (FROM NEW SOURCES)
+# PHASE 3: ADVANCED PATTERN NEUTRALIZATION
 # =========================================================
 
 def break_metronome_rhythm(text):
-    """SOURCE: AI Detector 360 – Break uniform sentence length"""
     doc = nlp(text)
     sentences = [sent.text.strip() for sent in doc.sents if sent.text.strip()]
     
@@ -698,31 +825,26 @@ def break_metronome_rhythm(text):
     return " ".join(new_sentences)
 
 def neutralize_both_sides_hedging(text):
-    """SOURCE: AI Detector 360 – Remove 'on one hand... on the other hand'"""
     for pattern, replacement in BOTH_SIDES_HEDGING.items():
         text = re.sub(pattern, lambda m: replacement(m), text, flags=re.IGNORECASE)
     return text
 
 def neutralize_hedge_words(text):
-    """SOURCE: ETBI Digital Library – Remove excessive hedges"""
     for pattern, replacement in HEDGE_WORDS.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
     return text
 
 def replace_generic_examples(text):
-    """SOURCE: AI Detector 360 + Medium – Replace vague examples"""
     for pattern, replacement in GENERIC_EXAMPLES.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
     return text
 
 def break_summary_sandwich(text):
-    """SOURCE: AI Detector 360 – Remove intro/outro restatements"""
     for pattern, replacement in SUMMARY_SANDWICH.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
     return text
 
 def add_subtext_and_nuance(text):
-    """SOURCE: The Algorithmic Bridge – Remove over-explanation"""
     for pattern in OBVIOUS_INDICATORS:
         text = re.sub(pattern + r"\s+", "", text, flags=re.IGNORECASE)
     
@@ -740,7 +862,6 @@ def add_subtext_and_nuance(text):
     return text
 
 def add_emotional_heat(text):
-    """SOURCE: Medium + Wandering Educators – Inject genuine emotion"""
     if random.random() < 0.15:
         emotions = [
             "frustrating",
@@ -762,7 +883,6 @@ def add_emotional_heat(text):
     return text
 
 def humanize_advanced_patterns(text):
-    """Apply all advanced pattern neutralizations from new sources."""
     text = break_metronome_rhythm(text)
     text = neutralize_both_sides_hedging(text)
     text = neutralize_hedge_words(text)
@@ -770,6 +890,131 @@ def humanize_advanced_patterns(text):
     text = break_summary_sandwich(text)
     text = add_subtext_and_nuance(text)
     text = add_emotional_heat(text)
+    return text
+
+
+# =========================================================
+# RESEARCH-BASED PATTERNS (CMU, post-2025)
+# =========================================================
+
+def break_statistical_patterns(text):
+    doc = nlp(text)
+    sentences = [sent.text.strip() for sent in doc.sents if sent.text.strip()]
+    
+    if len(sentences) < 4:
+        return text
+    
+    new_sentences = []
+    for i, sent in enumerate(sentences):
+        words = sent.split()
+        
+        if i % 4 == 0 and random.random() < 0.3 and len(words) > 3:
+            key_phrase = " ".join(words[:min(3, len(words))])
+            new_sentences.append(key_phrase + ".")
+            if len(words) > 3:
+                rest = " ".join(words[3:])
+                new_sentences.append(rest)
+            continue
+        
+        elif (i < len(sentences) - 1 and 
+              random.random() < 0.15 and
+              len(sentences[i].split()) < 8 and
+              len(sentences[i+1].split()) < 8):
+            new_sentences.append(sent + " " + sentences[i+1].lower())
+            continue
+        
+        new_sentences.append(sent)
+    
+    return " ".join(new_sentences)
+
+def replace_new_ai_buzzwords(text):
+    for pattern, replacement in NEW_AI_BUZZWORDS.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def neutralize_present_participial(text):
+    for pattern, replacement in PRESENT_PARTICIPIAL.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def convert_noun_chains(text):
+    for pattern, replacement in NOUN_CHAINS.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def remove_assertive_phrases(text):
+    for pattern, replacement in TONE_SHIFTS.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def apply_research_patterns(text):
+    text = replace_new_ai_buzzwords(text)
+    text = neutralize_present_participial(text)
+    text = convert_noun_chains(text)
+    text = remove_assertive_phrases(text)
+    text = break_statistical_patterns(text)
+    return text
+
+
+# =========================================================
+# MODEL-SPECIFIC EVASION (Turnitin, ChatGPT, Claude, Gemini)
+# =========================================================
+
+def remove_chatgpt_artifacts(text):
+    for pattern, replacement in CHATGPT_ARTIFACTS.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def neutralize_claude_signatures(text):
+    for pattern, replacement in CLAUDE_SIGNATURES.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def neutralize_gemini_patterns(text):
+    for pattern, replacement in GEMINI_PATTERNS.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def apply_turnitin_evasion(text):
+    for pattern, replacement in TURNITIN_PATTERNS.items():
+        if callable(replacement):
+            text = re.sub(pattern, lambda m: replacement(m), text, flags=re.IGNORECASE)
+        else:
+            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def apply_ai_anti_patterns(text):
+    for pattern, replacement in AI_ANTI_PATTERNS.items():
+        if callable(replacement):
+            text = re.sub(pattern, lambda m: replacement(m), text, flags=re.IGNORECASE)
+        else:
+            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def apply_hsdm_patterns(text):
+    for pattern, replacements in HSDM_PATTERNS.items():
+        if isinstance(replacements, list):
+            text = re.sub(pattern, random.choice(replacements), text, flags=re.IGNORECASE)
+        elif callable(replacements):
+            text = re.sub(pattern, lambda m: replacements(m), text, flags=re.IGNORECASE)
+    return text
+
+def apply_mash_style_transfer(text):
+    for pattern, replacement in MASH_PATTERNS.items():
+        if callable(replacement):
+            text = re.sub(pattern, lambda m: replacement(m), text, flags=re.IGNORECASE)
+        else:
+            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def humanize_model_specific(text):
+    text = remove_chatgpt_artifacts(text)
+    text = neutralize_claude_signatures(text)
+    text = neutralize_gemini_patterns(text)
+    text = apply_turnitin_evasion(text)
+    text = apply_ai_anti_patterns(text)
+    text = apply_hsdm_patterns(text)
+    text = apply_mash_style_transfer(text)
     return text
 
 
@@ -910,15 +1155,12 @@ def humanize_ai_structure(text):
 # =========================================================
 
 def deep_humanize(text):
-    # SOURCE 5: LitHub
     for pattern, replacement in GENERIC_POSITIVE.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
     
-    # SOURCE 6: RJ Scribbles
     for pattern, replacement in NOT_ONLY_BUT_ALSO.items():
         text = re.sub(pattern, lambda m: replacement(m), text, flags=re.IGNORECASE)
     
-    # SOURCE 7: Joshua Burdick
     for pattern, replacement in NEGATION_REFRA_ME.items():
         text = re.sub(pattern, lambda m: replacement(m), text, flags=re.IGNORECASE)
     
@@ -931,11 +1173,9 @@ def deep_humanize(text):
     for pattern, replacement in CONCLUSION_RESTATE.items():
         text = re.sub(pattern, lambda m: replacement(m), text, flags=re.IGNORECASE)
     
-    # SOURCE 8: Quillbot
     for pattern, replacement in REPETITIVE_STRUCTURES.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
     
-    # SOURCE 9-10: Targeted fixes
     for pattern, replacement in GRAMMAR_FIXES.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
     
@@ -951,10 +1191,37 @@ def deep_humanize(text):
     for pattern, replacement in EXTRA_TRANSITIONS.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
     
-    # Apply structural variations (Phase 2)
     text = add_human_variation(text)
     text = inject_human_voice(text)
     text = add_specificity(text)
+    
+    return text
+
+
+# =========================================================
+# CLEANUP: REMOVE HUMANIZER ARTIFACTS
+# =========================================================
+
+def remove_artifacts(text):
+    text = re.sub(r"\bworth attention\b", "key", text, flags=re.IGNORECASE)
+    text = re.sub(r"\ba worth attention\b", "a key", text, flags=re.IGNORECASE)
+    
+    stat_patterns = [
+        r"\baffecting nearly three-quarters of users,\s*like you and me\b",
+        r"\babout 60-70% of the time\b",
+        r"\bin roughly 8 out of 10 cases\b",
+        r"\bwith around 40% reporting improvement\b",
+    ]
+    for pattern in stat_patterns:
+        text = re.sub(pattern, "", text, flags=re.IGNORECASE)
+    
+    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"\.\s+([a-z])", lambda m: ". " + m.group(1).upper(), text)
+    text = re.sub(r",\s*like you and me\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bportugal\b", "Portugal", text)
+    text = re.sub(r"\.\s+His success with\s+", ". His success with ", text)
+    text = re.sub(r"\bplay\s+worth attention\b", "play key", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bplayed\s+worth attention\b", "played key", text, flags=re.IGNORECASE)
     
     return text
 
@@ -1110,25 +1377,34 @@ def humanize_text(text):
     # Step 3: DEEP REWRITING – Break AI statistical signature
     text = deep_humanize(text)
     
-    # Step 4: ADVANCED PATTERN NEUTRALIZATION (NEW – from 8 new sources)
+    # Step 4: ADVANCED PATTERN NEUTRALIZATION
     text = humanize_advanced_patterns(text)
     
-    # Step 5: Expand contractions (with 30% skip)
+    # Step 5: RESEARCH-BASED PATTERNS
+    text = apply_research_patterns(text)
+    
+    # Step 6: MODEL-SPECIFIC EVASION
+    text = humanize_model_specific(text)
+    
+    # Step 7: CLEANUP – Remove humanizer artifacts
+    text = remove_artifacts(text)
+    
+    # Step 8: Expand contractions (with 30% skip)
     text = expand_contractions(text)
     
-    # Step 6: Replace common words (context-aware, probability gate)
+    # Step 9: Replace common words (context-aware, probability gate)
     text = replace_common_words(text)
     
-    # Step 7: Add transitions (randomized)
+    # Step 10: Add transitions (randomized)
     text = improve_transitions(text)
     
-    # Step 8: Neutralize AI puffery
+    # Step 11: Neutralize AI puffery
     text = neutralize_ai_puffery(text)
     
-    # Step 9: Neutralize vague attribution
+    # Step 12: Neutralize vague attribution
     text = neutralize_vague_attribution(text)
     
-    # Step 10: Clean spacing and capitalization
+    # Step 13: Clean spacing and capitalization
     text = clean_text(text)
     
     return text
