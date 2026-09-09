@@ -334,6 +334,53 @@ AI_BUZZWORDS_KERNAN = {
 # Combined buzzword dictionary (merge both sources)
 AI_BUZZWORDS = {**AI_BUZZWORDS_HUNTING, **AI_BUZZWORDS_KERNAN}
 
+
+# =========================================================
+# ADDITIONAL PATTERNS FROM 6 NEW SOURCES
+# =========================================================
+
+# SOURCE 5: LitHub (via Wikipedia) – Generic positive descriptions
+GENERIC_POSITIVE = {
+    r"\b(revolutionary|groundbreaking|transformative|game-changing)\s+(tool|approach|method|solution)\b": 
+        lambda m: f"useful {m.group(2)}",
+    r"\b(incredibly|remarkably|exceptionally)\s+(important|significant|valuable)\b": r"\2",
+}
+
+# SOURCE 6: RJ Scribbles – "Not only... but also" structures
+NOT_ONLY_BUT_ALSO = {
+    r"\bNot only\s+([^,;.]+?),\s+but also\s+([^,;.]+?)\b": 
+        lambda m: f"{m.group(1)} and {m.group(2)}",
+}
+
+# SOURCE 7: Joshua Burdick – Negation-reframe, triple-beat, false-humble, conclusion-restate
+NEGATION_REFRA ME = {
+    r"\bIt's not\s+([^,;.]+?)\.\s+It's\s+([^,;.]+?)\b": 
+        lambda m: f"{m.group(2)} matters more than {m.group(1)}",
+}
+
+TRIPLE_BEAT = {
+    r"\b([A-Za-z]+)\.\s+([A-Za-z]+)\.\s+([A-Za-z]+)\.\b": 
+        lambda m: f"{m.group(1)}, {m.group(2)}, and {m.group(3)}",
+}
+
+FALSE_HUMBLE = {
+    r"\bI used to think\s+([^,;.]+?)\.\s+Then I learned\s+([^,;.]+?)\b": 
+        lambda m: f"I now understand that {m.group(2)}",
+}
+
+CONCLUSION_RESTATE = {
+    r"\bIn conclusion\s+([^,;.]+?)\.\s+([^,;.]+?)\b": 
+        lambda m: f"{m.group(2)}",
+}
+
+# SOURCE 8: Quillbot – Repetitive structures, generic explanations
+REPETITIVE_STRUCTURES = {
+    r"\b(This|It)\s+is\s+(important|crucial|essential|vital)\s+to\s+(note|remember|understand)\b": "",
+    r"\bThere\s+is\s+no\s+doubt\s+that\b": "",
+    r"\bIt\s+is\s+worth\s+mentioning\s+that\b": "",
+}
+
+
 # =========================================================
 # DE-AI PHRASE MAPPINGS (neutralize AI-generated puffery)
 # =========================================================
@@ -395,7 +442,273 @@ AI_PHRASE_REPLACEMENTS = {
     r"\bhas\s+the\s+capacity\s+to\b": "can",
 }
 
-# Structural transformations
+
+# =========================================================
+# PHASE 2: DEEP STRUCTURAL REWRITING (BREAK AI SIGNATURE)
+# =========================================================
+
+def add_human_variation(text):
+    """
+    Apply deep structural transformations that force human-like unpredictability.
+    Each transformation is applied with random probability (not always, not never).
+    """
+    
+    # 1. Split into sentences
+    doc = nlp(text)
+    sentences = [sent.text.strip() for sent in doc.sents if sent.text.strip()]
+    
+    if len(sentences) < 3:
+        return text
+    
+    # 2. Randomly reorder some sentences (30% chance per sentence pair)
+    if len(sentences) > 4 and random.random() < 0.3:
+        # Swap two non-adjacent sentences
+        idx1 = random.randint(0, len(sentences)-2)
+        idx2 = random.randint(idx1+2, len(sentences)-1)
+        sentences[idx1], sentences[idx2] = sentences[idx2], sentences[idx1]
+    
+    # 3. Randomly split or combine sentences
+    new_sentences = []
+    i = 0
+    while i < len(sentences):
+        sent = sentences[i]
+        words = sent.split()
+        
+        # Option A: Split long sentence (35% chance if >20 words)
+        if len(words) > 20 and random.random() < 0.35:
+            # Find a natural break point (comma, conjunction, or preposition)
+            break_points = [j for j in range(10, len(words)-5) 
+                          if words[j][-1] in ',;:.' or words[j].lower() in ['and', 'but', 'or', 'so', 'because']]
+            if break_points:
+                split_idx = random.choice(break_points)
+                first = " ".join(words[:split_idx+1])
+                second = " ".join(words[split_idx+1:])
+                # Capitalize second
+                if second:
+                    second = second[0].upper() + second[1:]
+                new_sentences.append(first)
+                new_sentences.append(second)
+                i += 1
+            else:
+                new_sentences.append(sent)
+        # Option B: Combine with next sentence (30% chance if both <10 words)
+        elif (i < len(sentences) - 1 and 
+              len(words) < 10 and 
+              len(sentences[i+1].split()) < 10 and
+              random.random() < 0.3):
+            combined = sent + " " + sentences[i+1].lower()
+            new_sentences.append(combined)
+            i += 2
+            continue
+        else:
+            new_sentences.append(sent)
+        i += 1
+    
+    # 4. Inject occasional sentence fragments (15% chance)
+    if len(new_sentences) > 3 and random.random() < 0.15:
+        idx = random.randint(1, len(new_sentences)-1)
+        words = new_sentences[idx].split()
+        if len(words) > 5:
+            # Convert to fragment by removing the first 1-2 words
+            fragment_words = random.randint(1, min(2, len(words)-2))
+            new_sentences[idx] = "... " + " ".join(words[fragment_words:])
+    
+    # 5. Add occasional rhetorical questions (20% chance)
+    if len(new_sentences) > 2 and random.random() < 0.2:
+        idx = random.randint(0, len(new_sentences)-2)
+        if not new_sentences[idx].endswith('?'):
+            # Convert a declarative sentence to question
+            words = new_sentences[idx].split()
+            if len(words) > 3:
+                # Simple transformation: add "Does/Is/Are" at beginning
+                if words[0].lower() in ['the', 'this', 'that', 'these', 'those']:
+                    new_sentences[idx] = "Does " + ' '.join(words[1:]) + "?"
+                elif words[0].lower() in ['it', 'he', 'she', 'they', 'we']:
+                    new_sentences[idx] = "Is " + ' '.join(words[1:]) + "?"
+                else:
+                    new_sentences[idx] = words[0] + " – does that matter?"
+    
+    # 6. Rebuild text
+    text = " ".join(new_sentences)
+    
+    # 7. Add personal/anecdotal detail injection (25% chance)
+    if len(text.split()) > 40 and random.random() < 0.25:
+        anecdotes = [
+            "Consider this: ",
+            "For context, ",
+            "Think of it this way – ",
+            "To put it simply, ",
+            "Here's the reality: ",
+        ]
+        # Insert at a random position (not first sentence)
+        sentences = text.split('. ')
+        if len(sentences) > 2:
+            idx = random.randint(1, len(sentences)-1)
+            sentences[idx] = random.choice(anecdotes) + sentences[idx].lower()
+        text = ". ".join(sentences)
+    
+    return text
+
+def inject_human_voice(text):
+    """
+    Add voice switching (1st/2nd/3rd person mix) to break AI's monotone.
+    """
+    # Don't apply if already has mixed voice
+    has_first_person = any(word in text.lower() for word in ['i ', "i'm", "i've", "we ", "we're"])
+    has_second_person = any(word in text.lower() for word in ['you ', "you're", "your "])
+    
+    if has_first_person and has_second_person:
+        return text  # Already mixed
+    
+    sentences = text.split('. ')
+    if len(sentences) < 3:
+        return text
+    
+    # Randomly switch some sentences to second person
+    if not has_second_person and random.random() < 0.4:
+        idx = random.randint(1, min(3, len(sentences)-1))
+        words = sentences[idx].split()
+        if len(words) > 2:
+            # Prepend "You might think" or similar
+            introductions = [
+                "You might think that ",
+                "Consider that ",
+                "You could argue that ",
+            ]
+            sentences[idx] = random.choice(introductions) + ' '.join(words[1:]) if len(words) > 3 else random.choice(introductions) + sentences[idx].lower()
+    
+    # Randomly switch some sentences to first person
+    if not has_first_person and random.random() < 0.35:
+        idx = random.randint(1, len(sentences)-1)
+        words = sentences[idx].split()
+        if len(words) > 3:
+            introductions = [
+                "I find that ",
+                "I think ",
+                "In my experience, ",
+                "We often see that ",
+            ]
+            sentences[idx] = random.choice(introductions) + ' '.join(words[1:]) if len(words) > 3 else random.choice(introductions) + sentences[idx].lower()
+    
+    return '. '.join(sentences)
+
+def add_specificity(text):
+    """
+    Replace generic claims with concrete details (using word lists).
+    """
+    # Replace generic "important" with specific context
+    replacements = {
+        r"\bimportant\b": random.choice(["critical", "essential", "key", "notable", "worth attention"]),
+        r"\bsignificant\b": random.choice(["substantial", "meaningful", "noticeable", "real"]),
+        r"\bhelp\b": random.choice(["support", "assist", "aid", "make it easier"]),
+        r"\buse\b": random.choice(["apply", "utilize", "employ", "work with"]),
+        r"\bshow\b": random.choice(["demonstrate", "reveal", "indicate", "suggest"]),
+        r"\bgood\b": random.choice(["effective", "beneficial", "solid", "reliable"]),
+        r"\bbad\b": random.choice(["problematic", "harmful", "troubling", "challenging"]),
+    }
+    
+    for pattern, replacement in replacements.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    
+    # Add concrete numbers/examples (simulated)
+    if random.random() < 0.15 and len(text.split()) > 30:
+        # Insert a statistic-like phrase
+        stats = [
+            " about 60-70% of the time",
+            " in roughly 8 out of 10 cases",
+            " affecting nearly three-quarters of users",
+            " with around 40% reporting improvement",
+        ]
+        # Find a suitable place (after a verb)
+        sentences = text.split('. ')
+        if len(sentences) > 2:
+            idx = random.randint(1, len(sentences)-1)
+            words = sentences[idx].split()
+            if len(words) > 4:
+                insert_pos = random.randint(2, len(words)-1)
+                sentences[idx] = ' '.join(words[:insert_pos]) + random.choice(stats) + ' ' + ' '.join(words[insert_pos:])
+            text = '. '.join(sentences)
+    
+    return text
+
+
+# =========================================================
+# APPLY ALL PATTERN-BASED FILTERS FROM EXTERNAL GUIDES
+# =========================================================
+
+def normalize_em_dashes(text):
+    """SOURCE: Hunting the Muse – Convert unspaced em dashes to spaced"""
+    for pattern, replacement in EM_DASH_PATTERNS.items():
+        text = re.sub(pattern, replacement, text)
+    return text
+
+def remove_sass_phrases(text):
+    """SOURCE: Hunting the Muse – Remove forced conflict creators"""
+    for pattern, replacement in SASS_PHRASES.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def replace_ai_buzzwords(text):
+    """SOURCE: Hunting the Muse + Sean Kernan – Replace overused AI vocabulary"""
+    for pattern, replacement in AI_BUZZWORDS.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def remove_stock_phrases(text):
+    """SOURCE: Wandering Educators – Remove filler stock phrases"""
+    for pattern, replacement in STOCK_PHRASES.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def break_parallelism(text):
+    """SOURCE: Sean Kernan – Rewrite repetitive 'not X but Y' structures"""
+    for pattern, replacement in PARALLELISM_PATTERNS.items():
+        # Use lambda for dynamic replacement
+        text = re.sub(pattern, lambda m: replacement(m), text, flags=re.IGNORECASE)
+    return text
+
+def neutralize_hedging(text):
+    """SOURCE: Sean Kernan – Replace excessive hedging"""
+    for pattern, replacement in HEDGING_PHRASES.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def remove_blog_cliches(text):
+    """SOURCE: Sean Kernan – Strip blogging clichés"""
+    for pattern, replacement in BLOG_CLICHES.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def remove_transition_crutches(text):
+    """SOURCE: Wandering Educators – Remove excessive transitions"""
+    for pattern, replacement in TRANSITION_CRUTCHES.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def neutralize_generic_claims(text):
+    """SOURCE: AI Detector Checker – Replace vague importance claims"""
+    for pattern, replacement in GENERIC_CLAIMS.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def humanize_ai_patterns(text):
+    """Apply all pattern-based filters from external guides in sequence"""
+    text = normalize_em_dashes(text)
+    text = remove_sass_phrases(text)
+    text = replace_ai_buzzwords(text)
+    text = remove_stock_phrases(text)
+    text = break_parallelism(text)
+    text = neutralize_hedging(text)
+    text = remove_blog_cliches(text)
+    text = remove_transition_crutches(text)
+    text = neutralize_generic_claims(text)
+    return text
+
+
+# =========================================================
+# STRUCTURAL TRANSFORMATIONS
+# =========================================================
+
 def break_ai_sentence_patterns(text):
     """Convert AI's typical long complex sentences into varied structures"""
     doc = nlp(text)
@@ -476,75 +789,46 @@ def humanize_ai_structure(text):
 
 
 # =========================================================
-# APPLY ALL PATTERN-BASED FILTERS FROM EXTERNAL GUIDES
+# DEEP HUMANIZE – APPLY ALL NEW PATTERNS FROM 6 SOURCES
 # =========================================================
 
-def normalize_em_dashes(text):
-    """SOURCE: Hunting the Muse – Convert unspaced em dashes to spaced"""
-    for pattern, replacement in EM_DASH_PATTERNS.items():
-        text = re.sub(pattern, replacement, text)
-    return text
-
-def remove_sass_phrases(text):
-    """SOURCE: Hunting the Muse – Remove forced conflict creators"""
-    for pattern, replacement in SASS_PHRASES.items():
+def deep_humanize(text):
+    """
+    Apply all deep rewriting passes including new patterns from 6 additional sources.
+    """
+    # 1. Remove generic positive hype (LitHub)
+    for pattern, replacement in GENERIC_POSITIVE.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-    return text
-
-def replace_ai_buzzwords(text):
-    """SOURCE: Hunting the Muse + Sean Kernan – Replace overused AI vocabulary"""
-    for pattern, replacement in AI_BUZZWORDS.items():
-        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-    return text
-
-def remove_stock_phrases(text):
-    """SOURCE: Wandering Educators – Remove filler stock phrases"""
-    for pattern, replacement in STOCK_PHRASES.items():
-        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-    return text
-
-def break_parallelism(text):
-    """SOURCE: Sean Kernan – Rewrite repetitive 'not X but Y' structures"""
-    for pattern, replacement in PARALLELISM_PATTERNS.items():
-        # Use lambda for dynamic replacement
+    
+    # 2. Break "Not only... but also" (RJ Scribbles)
+    for pattern, replacement in NOT_ONLY_BUT_ALSO.items():
         text = re.sub(pattern, lambda m: replacement(m), text, flags=re.IGNORECASE)
-    return text
-
-def neutralize_hedging(text):
-    """SOURCE: Sean Kernan – Replace excessive hedging"""
-    for pattern, replacement in HEDGING_PHRASES.items():
+    
+    # 3. Break negation-reframe (Joshua Burdick)
+    for pattern, replacement in NEGATION_REFRA ME.items():
+        text = re.sub(pattern, lambda m: replacement(m), text, flags=re.IGNORECASE)
+    
+    # 4. Break triple-beat (Joshua Burdick)
+    for pattern, replacement in TRIPLE_BEAT.items():
+        text = re.sub(pattern, lambda m: replacement(m), text, flags=re.IGNORECASE)
+    
+    # 5. Remove false-humble (Joshua Burdick)
+    for pattern, replacement in FALSE_HUMBLE.items():
+        text = re.sub(pattern, lambda m: replacement(m), text, flags=re.IGNORECASE)
+    
+    # 6. Remove conclusion restatement (Joshua Burdick)
+    for pattern, replacement in CONCLUSION_RESTATE.items():
+        text = re.sub(pattern, lambda m: replacement(m), text, flags=re.IGNORECASE)
+    
+    # 7. Remove repetitive structures (Quillbot)
+    for pattern, replacement in REPETITIVE_STRUCTURES.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-    return text
-
-def remove_blog_cliches(text):
-    """SOURCE: Sean Kernan – Strip blogging clichés"""
-    for pattern, replacement in BLOG_CLICHES.items():
-        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-    return text
-
-def remove_transition_crutches(text):
-    """SOURCE: Wandering Educators – Remove excessive transitions"""
-    for pattern, replacement in TRANSITION_CRUTCHES.items():
-        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-    return text
-
-def neutralize_generic_claims(text):
-    """SOURCE: AI Detector Checker – Replace vague importance claims"""
-    for pattern, replacement in GENERIC_CLAIMS.items():
-        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-    return text
-
-def humanize_ai_patterns(text):
-    """Apply all pattern-based filters from external guides in sequence"""
-    text = normalize_em_dashes(text)
-    text = remove_sass_phrases(text)
-    text = replace_ai_buzzwords(text)
-    text = remove_stock_phrases(text)
-    text = break_parallelism(text)
-    text = neutralize_hedging(text)
-    text = remove_blog_cliches(text)
-    text = remove_transition_crutches(text)
-    text = neutralize_generic_claims(text)
+    
+    # 8. Apply structural variations (existing)
+    text = add_human_variation(text)
+    text = inject_human_voice(text)
+    text = add_specificity(text)
+    
     return text
 
 
@@ -741,25 +1025,28 @@ def humanize_text(text):
     # Step 1: Structural fixes for AI-generated text
     text = humanize_ai_structure(text)
     
-    # Step 1.5: Pattern-based fixes from external guides
+    # Step 2: Pattern-based fixes from all external guides
     text = humanize_ai_patterns(text)
     
-    # Step 2: Expand contractions (with 30% skip)
+    # Step 3: DEEP REWRITING – Break AI statistical signature
+    text = deep_humanize(text)
+    
+    # Step 4: Expand contractions (with 30% skip)
     text = expand_contractions(text)
     
-    # Step 3: Replace common words (context-aware, probability gate)
+    # Step 5: Replace common words (context-aware, probability gate)
     text = replace_common_words(text)
     
-    # Step 4: Add transitions (randomized)
+    # Step 6: Add transitions (randomized)
     text = improve_transitions(text)
     
-    # Step 5: Neutralize AI puffery
+    # Step 7: Neutralize AI puffery
     text = neutralize_ai_puffery(text)
     
-    # Step 6: Neutralize vague attribution
+    # Step 8: Neutralize vague attribution
     text = neutralize_vague_attribution(text)
     
-    # Step 7: Clean spacing and capitalization
+    # Step 9: Clean spacing and capitalization
     text = clean_text(text)
     
     return text
