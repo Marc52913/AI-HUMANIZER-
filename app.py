@@ -61,10 +61,6 @@ h1 {
 # SKSU LOGO
 # -----------------------------
 st.markdown("""
-<div class="logo">
-    <img src="https://sksu.edu.ph/wp-content/uploads/2026/03/sksu_seal.png"
-         width="120">
-</div>
 """, unsafe_allow_html=True)
 
 # -----------------------------
