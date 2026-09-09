@@ -240,7 +240,7 @@ COMMON_REPLACEMENTS = {
 
 
 # =========================================================
-# PATTERN LIBRARY – ALL 37 SOURCES
+# PATTERN LIBRARY – ALL SOURCES
 # =========================================================
 
 # SOURCE 1: Hunting the Muse
@@ -572,127 +572,206 @@ MASH_PATTERNS = {
     r"\.\s+([A-Z][a-z]+)": lambda m: f". Perhaps {m.group(1).lower()}",
 }
 
+
 # =========================================================
-# NEW PATTERNS FROM 12 MAJOR AI COMPANIES/DETECTORS
+# PRODUCTION-GRADE HUMANIZATION (Research-Backed)
 # =========================================================
 
-# SOURCE 26: CMU study – Model-specific signatures
-MODEL_SIGNATURES = {
-    # ChatGPT (GPT-4o)
-    r"\b(utilize|overall|such as)\b": lambda m: {"utilize": "use", "overall": "in general", "such as": "including"}.get(m.group(1), m.group(1)),
-    # Claude
-    r"\b(according to|according to the text)\b": "as stated in",
-    r"\b(here is|here are)\b": "",
-    # Gemini
-    r"\bessentially\b": "",
-    # DeepSeek
-    r"\bcertainly\b": "",
-    # Grok
-    r"\bremember\s+that\b": "",
-    r"\bnot only\s+([^,;.]+?),\s+but also\s+([^,;.]+?)\b": lambda m: f"{m.group(1)} and {m.group(2)}",
-}
+def syntactic_restructuring(text):
+    """
+    SOURCE: Varga & Baksa (2025) – Syntactic-level detection evasion
+    Targets: modal verbs, participles, coordination patterns
+    """
+    # 1. Break coordination patterns (and/but/or chains)
+    text = re.sub(r'\b(and|but|or)\s+([A-Za-z]+)\s+and\s+([A-Za-z]+)\b', 
+                  lambda m: f"{m.group(2)} and {m.group(3)}", text, flags=re.IGNORECASE)
+    
+    # 2. Vary modal verbs (will → would, can → could, may → might)
+    modal_swaps = {
+        r'\bwill\b': ['would', 'shall'],
+        r'\bcan\b': ['could', 'may'],
+        r'\bmay\b': ['might', 'could'],
+        r'\bmust\b': ['should', 'ought to'],
+    }
+    for pattern, replacements in modal_swaps.items():
+        if random.random() < 0.25:
+            text = re.sub(pattern, random.choice(replacements), text, flags=re.IGNORECASE)
+    
+    # 3. Convert some participles (-ing) to infinitives (to + verb)
+    if random.random() < 0.15:
+        text = re.sub(r'\b(\w+)ing\s+([A-Za-z]+)\b', 
+                      lambda m: f"to {m.group(1)} {m.group(2)}", text, flags=re.IGNORECASE)
+    
+    return text
 
-# SOURCE 27: Semantic persistence (survives paraphrasing)
-DEEP_SIGNATURES = {
-    r"\b(in order to|in depth|more detailed)\b": 
-        lambda m: {"in order to": "to", "in depth": "thorough", "more detailed": "additional"}.get(m.group(1), m.group(1)),
-    r"\b(based on|here is|accordingly)\b": "",
-}
+def multi_pass_humanize(text):
+    """
+    SOURCE: HumanizeMCP (2026) – 9-pass pipeline
+    Each pass targets different signatures
+    """
+    # Pass 1: Remove all em dashes
+    text = re.sub(r'—', ', ', text)
+    text = re.sub(r'\s+', ' ', text)
+    
+    # Pass 2: Replace AI vocabulary
+    ai_vocab = {
+        r'\bdelve\b': 'explore',
+        r'\bmultifaceted\b': 'varied',
+        r'\btapestry\b': 'range',
+        r'\blandscape\b': 'field',
+        r'\bnavigate\b': 'handle',
+        r'\bunlock\b': 'reveal',
+        r'\bempower\b': 'enable',
+        r'\belevate\b': 'improve',
+        r'\bleverage\b': 'use',
+        r'\bpivotal\b': 'important',
+        r'\bcomprehensive\b': 'broad',
+        r'\brobust\b': 'strong',
+    }
+    for pattern, replacement in ai_vocab.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    
+    # Pass 3: Break parallel structures
+    text = re.sub(r'\bNot only\s+([^,;.]+?),\s+but also\s+([^,;.]+?)\b',
+                  lambda m: f"{m.group(1)} and {m.group(2)}", text, flags=re.IGNORECASE)
+    
+    # Pass 4: Remove excessive transitions (keep max 2)
+    transitions = ['Moreover', 'Furthermore', 'Additionally', 'Consequently', 'Therefore']
+    for t in transitions:
+        if text.lower().count(t.lower()) > 2:
+            text = re.sub(r'\b' + t + r',?\s*', '', text, flags=re.IGNORECASE)
+    
+    # Pass 5: Force burstiness (extreme sentence length variation)
+    doc = nlp(text)
+    sentences = [sent.text.strip() for sent in doc.sents if sent.text.strip()]
+    if len(sentences) > 3:
+        new_sentences = []
+        for i, sent in enumerate(sentences):
+            words = sent.split()
+            if i % 5 == 0 and len(words) > 10:
+                # Shorten dramatically
+                new_len = random.randint(3, 5)
+                new_sentences.append(' '.join(words[:new_len]) + '.')
+                if len(words) > new_len:
+                    rest = ' '.join(words[new_len:])
+                    new_sentences.append(rest[0].upper() + rest[1:] if rest else rest)
+            elif i % 7 == 0 and i < len(sentences)-1:
+                if len(words) < 6 and len(sentences[i+1].split()) < 6:
+                    combined = sent + ' ' + sentences[i+1].lower()
+                    new_sentences.append(combined)
+                    continue
+                else:
+                    new_sentences.append(sent)
+            else:
+                new_sentences.append(sent)
+        text = ' '.join(new_sentences)
+    
+    # Pass 6: Add intentional minor imperfections
+    if random.random() < 0.1:
+        sentences = text.split('. ')
+        if len(sentences) > 3:
+            idx = random.randint(1, len(sentences)-1)
+            words = sentences[idx].split()
+            if len(words) > 4:
+                sentences[idx] = ' '.join(words[1:])
+            text = '. '.join(sentences)
+    
+    # Pass 7: Change some declarative to questions
+    if random.random() < 0.05 and len(text.split()) > 50:
+        sentences = text.split('. ')
+        idx = random.randint(1, len(sentences)-1)
+        if not sentences[idx].endswith('?'):
+            sentences[idx] = sentences[idx] + '?'
+        text = '. '.join(sentences)
+    
+    return text
 
-# SOURCE 28: The Economist 2026 – Evolving tells
-EVOLVING_TELLS = {
-    r"\b(and\s+){3,}\b": lambda m: m.group(0).replace("and", "as well as", 1),
-    r"\b([A-Za-z]+)\s+([A-Za-z]+)\s+([A-Za-z]+)\s+and\s+([A-Za-z]+)\b": 
-        lambda m: f"{m.group(1)}, {m.group(2)}, {m.group(3)}, and {m.group(4)}",
-}
+def aggressive_structural_break(text):
+    """
+    SOURCE: Research-backed – Force human-like statistical distribution
+    Targets: perplexity, burstiness, lexical diversity
+    """
+    # 1. Force extreme sentence length variation
+    doc = nlp(text)
+    sentences = [sent.text.strip() for sent in doc.sents if sent.text.strip()]
+    
+    if len(sentences) < 4:
+        return text
+    
+    new_sentences = []
+    for i, sent in enumerate(sentences):
+        words = sent.split()
+        word_count = len(words)
+        
+        # Very short sentence (3-5 words) every 3-4 sentences
+        if i % 4 == 0 and word_count > 8:
+            new_len = random.randint(3, 5)
+            new_sentences.append(' '.join(words[:new_len]) + '.')
+            if word_count > new_len:
+                rest = ' '.join(words[new_len:])
+                new_sentences.append(rest[0].upper() + rest[1:] if rest else rest)
+            continue
+        
+        # Very long sentence (merge with next)
+        elif (i < len(sentences) - 1 and 
+              random.random() < 0.15 and
+              word_count < 6 and 
+              len(sentences[i+1].split()) < 6):
+            new_sentences.append(sent + ' ' + sentences[i+1].lower())
+            continue
+        
+        new_sentences.append(sent)
+    
+    text = ' '.join(new_sentences)
+    
+    # 2. Remove 60% of remaining transition words
+    transitions = ['moreover', 'furthermore', 'additionally', 'consequently', 'therefore']
+    for t in transitions:
+        if random.random() < 0.6:
+            text = re.sub(r'\b' + t + r'\b', '', text, flags=re.IGNORECASE)
+    
+    # 3. Replace repeated first words (AI tendency)
+    sentences = text.split('. ')
+    if len(sentences) > 3:
+        first_words = [s.split()[0].lower() if s.split() else '' for s in sentences]
+        repeat_counts = {}
+        for w in first_words:
+            if w in repeat_counts:
+                repeat_counts[w] += 1
+            else:
+                repeat_counts[w] = 1
+        for w, count in repeat_counts.items():
+            if count > 2 and w:
+                alternatives = ['However', 'Meanwhile', 'Notably', 'Interestingly', 'Critically']
+                for i, sent in enumerate(sentences):
+                    if sent.startswith(w.capitalize()) and random.random() < 0.5:
+                        sentences[i] = random.choice(alternatives) + ' ' + sent
+        text = '. '.join(sentences)
+    
+    # 4. Add occasional personal opinion (human-like)
+    if random.random() < 0.1 and len(text.split()) > 60:
+        opinions = [
+            "I'd argue that ",
+            "It's worth noting that ",
+            "Consider, for instance, that ",
+        ]
+        sentences = text.split('. ')
+        if len(sentences) > 3:
+            idx = random.randint(1, len(sentences)-1)
+            sentences[idx] = random.choice(opinions) + sentences[idx][0].lower() + sentences[idx][1:]
+        text = '. '.join(sentences)
+    
+    return text
 
-# SOURCE 29: Leak audit – ChatGPT artifacts (expanded)
-CHATGPT_LEAKS = {
-    r"\bturn0search\d+\b": "",
-    r"\boaicite:\d+\b": "",
-    r"\bcontentReference\[oaicite:\d+\]\b": "",
-    r"\bAs an AI[^.]*\.": "",
-    r"\bGreat question!?\b": "",
-    r"\bI hope this helps\b": "",
-    r"\bI hope this email finds you well\b": "",
-    r"\bCertainly, here is\b": "",
-    r"\bAbsolutely, here are\b": "",
-    r"\bHere is a\b": "",
-    r"\bHere are a few\b": "",
-}
-
-# SOURCE 30: Banned phrases (industry standard)
-BANNED_PHRASES = {
-    r"\bsignal, not noise\b": "",
-    r"\bsignal vs noise\b": "",
-    r"\bmore signal than noise\b": "",
-    r"\bIn conclusion,\s*": "",
-    r"\bIn summary,\s*": "",
-    r"\bOverall,\s*": "",
-    r"\bUltimately,\s*": "",
-    r"\bThe bottom line,\s*": "",
-    r"\bAt the end of the day,\s*": "",
-    r"\bIt's important to note,\s*": "",
-    r"\bIt's worth noting,\s*": "",
-    r"\bIt should be noted,\s*": "",
-    r"\bMaybe both\.\s*": "",
-    r"\bAnd honestly[?]?": "",
-    r"\bMaybe that's the point\.\s*": "",
-    r"\bI think that says something\.\s*": "",
-    r"\bIf that's not [A-Za-z]+, I don't know what is\.\s*": "",
-}
-
-# SOURCE 31: Parenthetical personality injections
-PERSONALITY_INJECTIONS = {
-    r"\(and honestly[?]?\)": "",
-    r"\(not that I'm complaining\)": "",
-    r"\(if that makes sense\)": "",
-    r"\(or something like that\)": "",
-    r"\(I mean\)": "",
-}
-
-# SOURCE 32: "from X to Y" false ranges
-FALSE_RANGES = {
-    r"\bfrom\s+([A-Za-z]+)\s+to\s+([A-Za-z]+)\b": lambda m: f"{m.group(1)} and {m.group(2)}",
-}
-
-# SOURCE 33: Copula avoidance
-COPULA_AVOIDANCE = {
-    r"\bserves as\b": "is",
-    r"\bstands as\b": "is",
-    r"\brepresents a\b": "is a",
-    r"\bmarks a\b": "is a",
-    r"\bboasts\b": "has",
-    r"\bfeatures\b": "has",
-}
-
-# SOURCE 34: Terminal participial phrases
-TERMINAL_PARTICIPIAL = {
-    r",\s+(\w+ing)\s+([^,;.]+?)$": r", and \1 \2",
-}
-
-# SOURCE 35: Philosophical mic drops
-MIC_DROPS = {
-    r"\bMaybe both\.\s*": "",
-    r"\bAnd honestly[?]?": "",
-    r"\bMaybe that's the point\.\s*": "",
-    r"\bI think that says something\.\s*": "",
-    r"\bIf that's not [A-Za-z]+, I don't know what is\.\s*": "",
-}
-
-# SOURCE 36: Three-item lists (tricolons)
-TRICOLONS = {
-    r"\b([A-Za-z]+),\s+([A-Za-z]+),\s+and\s+([A-Za-z]+)\b(?:\.|\s+[A-Z])": 
-        lambda m: f"{m.group(1)}, {m.group(2)}, and {m.group(3)}",
-}
-
-# SOURCE 37: "not X, it's Y" constructions
-NEGATION_CONSTRUCTIONS = {
-    r"\bIt's not\s+([^,;.]+?),\s+it's\s+([^,;.]+?)\b": 
-        lambda m: f"{m.group(1)} matters, but {m.group(2)} matters more",
-    r"\bnot just\s+([^,;.]+?),\s+it's\s+([^,;.]+?)\b": 
-        lambda m: f"both {m.group(1)} and {m.group(2)} matter",
-}
+def humanize_for_detectors(text):
+    """
+    Apply all production-grade humanization passes in sequence.
+    Targets: All major detectors (Turnitin, GPTZero, etc.)
+    """
+    text = syntactic_restructuring(text)
+    text = multi_pass_humanize(text)
+    text = aggressive_structural_break(text)
+    return text
 
 
 # =========================================================
@@ -1144,95 +1223,6 @@ def humanize_model_specific(text):
 
 
 # =========================================================
-# NEW: ALL MODEL PATTERNS (12 SOURCES)
-# =========================================================
-
-def apply_model_signatures(text):
-    for pattern, replacement in MODEL_SIGNATURES.items():
-        if callable(replacement):
-            text = re.sub(pattern, lambda m: replacement(m), text, flags=re.IGNORECASE)
-        else:
-            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-    return text
-
-def apply_deep_signatures(text):
-    for pattern, replacement in DEEP_SIGNATURES.items():
-        if callable(replacement):
-            text = re.sub(pattern, lambda m: replacement(m), text, flags=re.IGNORECASE)
-        else:
-            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-    return text
-
-def apply_evolving_tells(text):
-    for pattern, replacement in EVOLVING_TELLS.items():
-        if callable(replacement):
-            text = re.sub(pattern, lambda m: replacement(m), text, flags=re.IGNORECASE)
-        else:
-            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-    return text
-
-def remove_chatgpt_leaks(text):
-    for pattern, replacement in CHATGPT_LEAKS.items():
-        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-    return text
-
-def apply_banned_phrases(text):
-    for pattern, replacement in BANNED_PHRASES.items():
-        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-    return text
-
-def remove_personality_injections(text):
-    for pattern, replacement in PERSONALITY_INJECTIONS.items():
-        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-    return text
-
-def fix_false_ranges(text):
-    for pattern, replacement in FALSE_RANGES.items():
-        text = re.sub(pattern, lambda m: replacement(m), text, flags=re.IGNORECASE)
-    return text
-
-def fix_copula_avoidance(text):
-    for pattern, replacement in COPULA_AVOIDANCE.items():
-        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-    return text
-
-def fix_terminal_participial(text):
-    for pattern, replacement in TERMINAL_PARTICIPIAL.items():
-        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-    return text
-
-def remove_mic_drops(text):
-    for pattern, replacement in MIC_DROPS.items():
-        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-    return text
-
-def fix_tricolons(text):
-    for pattern, replacement in TRICOLONS.items():
-        text = re.sub(pattern, lambda m: replacement(m), text, flags=re.IGNORECASE)
-    return text
-
-def fix_negation_constructions(text):
-    for pattern, replacement in NEGATION_CONSTRUCTIONS.items():
-        text = re.sub(pattern, lambda m: replacement(m), text, flags=re.IGNORECASE)
-    return text
-
-def humanize_all_model_patterns(text):
-    text = apply_model_signatures(text)
-    text = apply_deep_signatures(text)
-    text = apply_evolving_tells(text)
-    text = remove_chatgpt_leaks(text)
-    text = apply_banned_phrases(text)
-    text = remove_personality_injections(text)
-    text = fix_false_ranges(text)
-    text = fix_copula_avoidance(text)
-    text = fix_terminal_participial(text)
-    text = remove_mic_drops(text)
-    text = fix_tricolons(text)
-    text = fix_negation_constructions(text)
-    return text
-
-
-# =========================================================
 # APPLY ALL PATTERN-BASED FILTERS
 # =========================================================
 
@@ -1656,8 +1646,8 @@ def humanize_text(text):
     # Step 6: MODEL-SPECIFIC EVASION
     text = humanize_model_specific(text)
     
-    # Step 7: ALL MODEL PATTERNS (37 sources integrated)
-    text = humanize_all_model_patterns(text)
+    # Step 7: PRODUCTION-GRADE HUMANIZATION (NEW – research-backed)
+    text = humanize_for_detectors(text)
     
     # Step 8: CLEANUP – Remove humanizer artifacts
     text = remove_artifacts(text)
