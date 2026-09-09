@@ -240,6 +240,28 @@ COMMON_REPLACEMENTS = {
 
 
 # =========================================================
+# DE-AI PHRASE MAPPINGS (neutralize AI-generated puffery)
+# =========================================================
+
+DEAI_PUFF = {
+    r"\b(pivotal|crucial|vital|significant)\s+(role|moment|shift|turning\s*point)\b": "important role",
+    r"\b(underscores|highlights|emphasizes)\s+(the\s+)?(importance|significance|enduring)\b": "shows",
+    r"\b(stands?\s+as|serves?\s+as)\s+a\s+(testament|reminder)\b": "is",
+    r"\breflects?\s+broader\b": "relates to",
+    r"\b(showcases|demonstrates)\s+the\s+(rich|vibrant)\b": "has",
+    r"\b(nestled|situated)\s+in\s+the\s+heart\b": "located in",
+    r"\bboasts?\s+a\b": "has a",
+    r"\b(landscape|tapestry)\s+of\b": "range of",
+}
+
+VAGUE_ATTRIB = {
+    r"\b(experts?|scholars|researchers|critics)\s+(say|argue|claim|suggest)\b": "sources indicate",
+    r"\b(it\s+is\s+widely\s+(accepted|believed|known))\b": "it is reported",
+    r"\b(several\s+sources|many\s+publications)\b": "available sources",
+}
+
+
+# =========================================================
 # SYNONYM FUNCTION
 # =========================================================
 
@@ -275,72 +297,74 @@ def get_synonym(word):
 
 
 # =========================================================
-# EXPAND CONTRACTIONS
+# EXPAND CONTRACTIONS (with human-like variation)
 # =========================================================
 
 def expand_contractions(text):
-
     for contraction, expanded in CONTRACTIONS.items():
-
+        # 30% chance to skip expansion (human-like variation)
+        if random.random() < 0.30:
+            continue
         pattern = r"\b" + re.escape(contraction) + r"\b"
-
         text = re.sub(
             pattern,
             expanded,
             text,
             flags=re.IGNORECASE
         )
-
     return text
 
 
 # =========================================================
-# REPLACE COMMON WORDS
+# REPLACE COMMON WORDS (context-aware + probability gate)
 # =========================================================
 
 def replace_common_words(text):
-
+    doc = nlp(text)
     words = text.split()
-
     new_words = []
+    spacy_tokens = list(doc)
+    token_idx = 0
 
     for word in words:
+        token = spacy_tokens[token_idx] if token_idx < len(spacy_tokens) else None
+        token_idx += 1
 
         punctuation = ""
-
         match = re.match(r"^([^A-Za-z]*)(.*?)([^A-Za-z]*)$", word)
 
-        if match:
-
-            prefix = match.group(1)
-            core = match.group(2)
-            suffix = match.group(3)
-
-            lower = core.lower()
-
-            if lower in COMMON_REPLACEMENTS:
-
-                replacement = random.choice(
-                    COMMON_REPLACEMENTS[lower]
-                )
-
-                if core[0].isupper():
-                    replacement = replacement.capitalize()
-
-                core = replacement
-
-            new_words.append(
-                prefix + core + suffix
-            )
-
-        else:
+        if not match:
             new_words.append(word)
+            continue
+
+        prefix = match.group(1)
+        core = match.group(2)
+        suffix = match.group(3)
+
+        lower = core.lower()
+
+        # Only replace if:
+        # 1. word is in COMMON_REPLACEMENTS
+        # 2. POS is NOUN, VERB, ADJ, ADV (not function words)
+        # 3. random probability < 0.45 (human variation)
+        if (lower in COMMON_REPLACEMENTS and token is not None and
+            token.pos_ in {"NOUN", "VERB", "ADJ", "ADV"} and
+            random.random() < 0.45):
+
+            replacement = random.choice(COMMON_REPLACEMENTS[lower])
+
+            if core[0].isupper():
+                replacement = replacement.capitalize()
+
+            core = replacement
+
+        new_words.append(prefix + core + suffix)
 
     return " ".join(new_words)
 
 
 # =========================================================
-# ADD NATURAL TRANSITIONS
+# ADD NATURAL TRANSITIONS (randomized, not fixed interval)
 # =========================================================
 
 TRANSITIONS = [
@@ -352,44 +376,53 @@ TRANSITIONS = [
     "Therefore,"
 ]
 
-
 def improve_transitions(text):
-
     doc = nlp(text)
-
     sentences = [
         sent.text.strip()
         for sent in doc.sents
         if sent.text.strip()
     ]
 
-    if len(sentences) < 3:
+    if len(sentences) < 4:
         return text
+
+    # choose random number of transitions (0 to min(2, len(sentences)-2))
+    num_trans = random.randint(0, min(2, len(sentences)-2))
+    positions = sorted(random.sample(range(1, len(sentences)-1), num_trans))
 
     output = []
 
-    for index, sentence in enumerate(sentences):
-
-        if index > 0 and index % 3 == 0:
-
+    for idx, sentence in enumerate(sentences):
+        if idx in positions:
             transition = random.choice(TRANSITIONS)
-
-            if not sentence.startswith(
-                tuple(TRANSITIONS)
-            ):
+            if not any(sentence.startswith(t) for t in TRANSITIONS):
                 sentence = transition + " " + sentence
-
         output.append(sentence)
 
     return " ".join(output)
 
 
 # =========================================================
-# IMPROVE SENTENCE SPACING
+# DE-AI NEUTRALIZATION FUNCTIONS
+# =========================================================
+
+def neutralize_ai_puffery(text):
+    for pattern, replacement in DEAI_PUFF.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+def neutralize_vague_attribution(text):
+    for pattern, replacement in VAGUE_ATTRIB.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+
+# =========================================================
+# IMPROVE SENTENCE SPACING (with transition-aware capitalization)
 # =========================================================
 
 def clean_text(text):
-
     text = re.sub(
         r"\s+",
         " ",
@@ -402,10 +435,15 @@ def clean_text(text):
         text
     )
 
-    if text:
-        text = text[0].upper() + text[1:]
+    # Do not force uppercase if sentence starts with transition (e.g., "however,")
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    cleaned = []
+    for sent in sentences:
+        if sent and not any(sent.lower().startswith(t.lower() + " ") for t in TRANSITIONS):
+            sent = sent[0].upper() + sent[1:] if len(sent) > 1 else sent.upper()
+        cleaned.append(sent)
 
-    return text
+    return " ".join(cleaned)
 
 
 # =========================================================
@@ -414,16 +452,22 @@ def clean_text(text):
 
 def humanize_text(text):
 
-    # Step 1
+    # Step 1: Expand contractions (with 30% skip)
     text = expand_contractions(text)
 
-    # Step 2
+    # Step 2: Replace common words (context-aware, probability gate)
     text = replace_common_words(text)
 
-    # Step 3
+    # Step 3: Add transitions (randomized)
     text = improve_transitions(text)
 
-    # Step 4
+    # Step 4: Neutralize AI puffery
+    text = neutralize_ai_puffery(text)
+
+    # Step 5: Neutralize vague attribution
+    text = neutralize_vague_attribution(text)
+
+    # Step 6: Clean spacing and capitalization
     text = clean_text(text)
 
     return text
