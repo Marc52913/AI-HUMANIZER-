@@ -1,10 +1,6 @@
 import streamlit as st
-
-from transformer.app import (
-    AcademicTextHumanizer,
-    NLP_GLOBAL,
-    download_nltk_resources
-)
+import re
+import random
 
 st.set_page_config(
     page_title="AI Text Humanizer",
@@ -12,7 +8,9 @@ st.set_page_config(
     layout="centered"
 )
 
-# Dark green design
+# -----------------------------
+# PAGE DESIGN
+# -----------------------------
 st.markdown("""
 <style>
 .stApp {
@@ -51,10 +49,17 @@ h1 {
     font-weight: bold;
     width: 100%;
 }
+
+.stButton > button:hover {
+    background-color: #1b7a43;
+    color: white;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# SKSU logo
+# -----------------------------
+# SKSU LOGO
+# -----------------------------
 st.markdown("""
 <div class="logo">
     <img src="https://sksu.edu.ph/wp-content/uploads/2026/03/sksu_seal.png"
@@ -62,6 +67,9 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# -----------------------------
+# TITLE
+# -----------------------------
 st.title("✍️ AI Text Humanizer")
 
 st.markdown(
@@ -69,7 +77,9 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Text input
+# -----------------------------
+# TEXT INPUT
+# -----------------------------
 text = st.text_area(
     "Enter your text:",
     height=250,
@@ -79,7 +89,56 @@ text = st.text_area(
 if text.strip():
     st.write(f"**Word count:** {len(text.split())}")
 
-# Humanize
+
+# -----------------------------
+# SIMPLE TEXT REFINEMENT
+# -----------------------------
+def refine_text(text):
+    """Refine text for clarity, grammar, and natural academic style."""
+
+    replacements = {
+        "don't": "do not",
+        "doesn't": "does not",
+        "can't": "cannot",
+        "won't": "will not",
+        "it's": "it is",
+        "I'm": "I am",
+        "I've": "I have",
+        "you're": "you are",
+        "they're": "they are",
+        "isn't": "is not",
+        "aren't": "are not",
+        "wasn't": "was not",
+        "weren't": "were not"
+    }
+
+    result = text
+
+    # Expand common contractions
+    for old, new in replacements.items():
+        result = re.sub(
+            r"\b" + re.escape(old) + r"\b",
+            new,
+            result,
+            flags=re.IGNORECASE
+        )
+
+    # Clean unnecessary spaces
+    result = re.sub(r"\s+", " ", result).strip()
+
+    # Add spacing after punctuation when missing
+    result = re.sub(r"([.!?])([A-Za-z])", r"\1 \2", result)
+
+    # Capitalize first character
+    if result:
+        result = result[0].upper() + result[1:]
+
+    return result
+
+
+# -----------------------------
+# HUMANIZE BUTTON
+# -----------------------------
 if st.button("✨ Humanize Text", type="primary"):
 
     if not text.strip():
@@ -88,35 +147,18 @@ if st.button("✨ Humanize Text", type="primary"):
     else:
         with st.spinner("Processing your text..."):
 
-            try:
-                download_nltk_resources()
+            output_text = refine_text(text)
 
-                humanizer = AcademicTextHumanizer(
-                    p_passive=0.3,
-                    p_synonym_replacement=0.3,
-                    p_academic_transition=0.4
-                )
+        st.success("Text processed successfully!")
 
-                output_text = humanizer.humanize_text(
-                    text,
-                    use_passive=True,
-                    use_synonyms=True
-                )
+        st.subheader("Refined Text")
 
-                st.success("Text processed successfully!")
+        st.text_area(
+            "Output:",
+            value=output_text,
+            height=250
+        )
 
-                st.subheader("Humanized Text")
-
-                st.text_area(
-                    "Output:",
-                    value=output_text,
-                    height=250
-                )
-
-                st.write(
-                    f"**Output word count:** {len(output_text.split())}"
-                )
-
-            except Exception as e:
-                st.error("Something went wrong while processing the text.")
-                st.exception(e)
+        st.write(
+            f"**Output word count:** {len(output_text.split())}"
+        )
