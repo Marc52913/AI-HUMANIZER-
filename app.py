@@ -370,7 +370,7 @@ REPETITIVE_STRUCTURES = {
     r"\bIt\s+is\s+worth\s+mentioning\s+that\b": "",
 }
 
-# SOURCE 9-10: Targeted fixes (from image.png analysis)
+# SOURCE 9-10: Targeted fixes (from image analysis)
 GRAMMAR_FIXES = {
     r"\ban\s+([aeiou][a-z]+)\b": r"a \1",
     r"\bIs\s+also\s+played\b": "He also played",
@@ -428,7 +428,7 @@ HEDGE_WORDS = {
     r"\bit is possible that\b": "",
 }
 
-# SOURCE 13: Medium (MonarchPanda)
+# SOURCE 13: Medium
 GENERIC_EXAMPLES = {
     r"\ba\s+(small business owner|busy professional|student)\s+": 
         lambda m: f"someone you know – a {m.group(1)} like Maria who runs a bakery in Portland",
@@ -1098,7 +1098,7 @@ def humanize_advanced_patterns(text):
 
 
 # =========================================================
-# RESEARCH-BASED PATTERNS (CMU, post-2025)
+# RESEARCH-BASED PATTERNS
 # =========================================================
 
 def break_statistical_patterns(text):
@@ -1161,7 +1161,7 @@ def apply_research_patterns(text):
 
 
 # =========================================================
-# MODEL-SPECIFIC EVASION (Turnitin, ChatGPT, Claude, Gemini)
+# MODEL-SPECIFIC EVASION
 # =========================================================
 
 def remove_chatgpt_artifacts(text):
@@ -1646,16 +1646,16 @@ def humanize_text(text):
     # Step 6: MODEL-SPECIFIC EVASION
     text = humanize_model_specific(text)
     
-    # Step 7: PRODUCTION-GRADE HUMANIZATION (NEW – research-backed)
+    # Step 7: PRODUCTION-GRADE HUMANIZATION
     text = humanize_for_detectors(text)
     
     # Step 8: CLEANUP – Remove humanizer artifacts
     text = remove_artifacts(text)
     
-    # Step 9: Expand contractions (with 30% skip)
+    # Step 9: Expand contractions
     text = expand_contractions(text)
     
-    # Step 10: Replace common words (context-aware, probability gate)
+    # Step 10: Replace common words
     text = replace_common_words(text)
     
     # Step 11: Add transitions (randomized)
